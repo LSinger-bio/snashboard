@@ -1,6 +1,8 @@
 library(shiny)
 library(bslib)
 library(osmdata)
+library(tidyverse)
+library(rinat)
 
 # Define UI
 ui <- page_sidebar(
@@ -31,7 +33,7 @@ ui <- page_sidebar(
             "Snails near you",
             # Plots
             card(
-                "placeholder"
+                plotOutput("inat_map")
             ),
             # Table
             card(
@@ -55,13 +57,37 @@ ui <- page_sidebar(
 
 server <- function(input, output, session){
     
+    ##############
+    ## GET DATA ##
+    ##############
+
     # Get longitude/latitude bounds from location once user hits Enter
     bb <- eventReactive(input$enter, {
         req(input$location)
         getbb(input$location)
     })
+
+    # Get map features (sf)
+    map_feat <- eventReactive(input$enter,{
+        opq(bbox = bb()) %>% 
+            add_osm_feature(key = 'boundary', value = "administrative") %>% 
+            osmdata_sf()
+    })
     
-    # Create slider for adjusting longitude
+    # Get iNaturalist data
+    inat_data <- eventReactive(input$enter,{
+        bounds <- bb()[c(2,1,4,3)]
+        get_inat_obs(taxon_name = "Gastropoda", bounds = bounds, quality = "research")
+    })
+
+    # Get paleobio db data
+    ##PLACEHOLDER##
+
+    ###############
+    # REACTIVE UI #
+    ###############
+
+    ## Create sliders for adjusting latitude/longitude
     output$longControl <- renderUI({
       sliderInput(
             "longitude",
@@ -71,40 +97,47 @@ server <- function(input, output, session){
             value = c(bb()[1,])
         )
     })
-
-    # Create slider for adjusting latitude
     output$latControl <- renderUI({
       sliderInput(
             "latitude",
             label = "Adjust latitude",
             min = bb()[2,1],
             max = bb()[2,2],
-            c(value = bb()[2,])
+            value = c(bb()[2,])
         )
     })
 
-    # Get map features (sf)
-    map_feat <- eventReactive(input$enter,{
-        opq(bbox = bb) %>% 
-            add_osm_feature(key = 'boundary', value = "administrative") %>% 
-            osmdata_sf()
-    })
+    ######################
+    # INATURALIST OUTPUT #
+    ######################
 
-    # Make base map
-    gg_map <- eventReactive(input$enter,{
-        ggplot()+
-            geom_sf(data = map_feat$osm_lines)+
-            theme_bw()+
-            xlim(input$longitude)+
-            ylim(input$latitude)
-    })
-
-    # Get iNaturalist data
     # Make iNaturalist map/plots
+    output$inat_map <- renderPlot({
+        ggplot()+
+            geom_sf(data = map_feat()$osm_lines)+
+            theme_bw()+
+            ### * COME BACK AND FIX LIMITS * ##
+            xlim(input$longitude)+
+            ylim(input$latitude) +
+            geom_point(
+                data = inat_data(), 
+                aes(x = longitude, y = latitude, color = scientific_name),
+                show.legend = F
+            )
+    })
+
     # Make iNaturalist table
-    # Get paleobio db data
+    ##PLACEHOLDER##
+    
+    ###############
+    # PBDB OUTPUT #
+    ###############
+
     # Make paleobio db map/plots
+    ##PLACEHOLDER##
+
     # Make paleobio db table
+    ##PLACEHOLDER##
 }
 
 shinyApp(ui, server)
