@@ -27,10 +27,10 @@ ui <- page_sidebar(
     ),
 
     # Inaturalist and paleobio db output
-    layout_columns(
         # Card for iNaturalist output
-        card(
-            "Snails near you",
+    card(
+        "Snails near you",
+        layout_columns(
             # Plots
             card(
                 plotOutput("inat_map")
@@ -39,10 +39,12 @@ ui <- page_sidebar(
             card(
                 "placeholder"
             )
-        ),
-        # Card for pbdb output
-        card(
-            "Snails that were near you",
+        )
+    ),
+    # Card for pbdb output
+    card(
+        "Snails that were near you",
+        layout_columns(
             # Plots
             card(
                 "placeholder"
@@ -77,7 +79,7 @@ server <- function(input, output, session){
     # Get iNaturalist data
     inat_data <- eventReactive(input$enter,{
         bounds <- bb()[c(2,1,4,3)]
-        get_inat_obs(taxon_name = "Gastropoda", bounds = bounds, quality = "research")
+        get_inat_obs(taxon_name = "Gastropoda", bounds = bounds, quality = "research", maxresults = 1000)
     })
 
     # Get paleobio db data
