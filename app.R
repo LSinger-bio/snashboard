@@ -7,6 +7,7 @@ library(rinat)
 library(plotly)
 library(lubridate)
 library(DT)
+library(paleobioDB)
 
 # Define UI
 ui <- page_sidebar(
@@ -14,7 +15,7 @@ ui <- page_sidebar(
     # Make the sidebar
     sidebar = sidebar(
         helpText(
-            "Welcome to Snashboard, the snail dashboard! Technically this is a gastropod dashboard, but Gashboard just didn't quite have the same ring to it."
+            "Welcome to Snashboard, the snail dashboard! Technically this is a gastropod dashboard, but Gashboard just didn't have the same ring to it."
         ),
         # User enters their location
         textInput(
@@ -26,35 +27,35 @@ ui <- page_sidebar(
             label = "Find snails near me"
         ),
         # User can filter inaturalist observation dates
-         uiOutput("yearControl")
+        uiOutput("yearControl")
     ),
-
-    # Inaturalist and paleobio db output
-    # Card for iNaturalist output
-    navset_card_underline(
-        title = "Snails near you",
-        nav_panel("Map", plotlyOutput("inat_map")),
-        nav_panel("Abundance data", 
-            layout_columns(
-                plotlyOutput("inat_bar"), 
-                dataTableOutput("inat_abd")
-            )
-        ),
-        nav_panel("All observations", dataTableOutput("inat_table")),
-        nav_panel("", tags$img(src='willem-dafoe-gq-style3.png', alt = "Willem Dafoe is delighted by his fancy coat", align = "center"))
-    ),
-    # Card for pbdb output
-    card(
-        "Snails that were near you",
-        layout_columns(
-            # Plots
-            card(
-                "placeholder"
+    layout_columns(
+        # Inaturalist and paleobio db output
+        # Card for iNaturalist output
+        navset_card_underline(
+            title = "Snails near you",
+            nav_panel("Map", 
+                    plotlyOutput("inat_map"),
+                    plotlyOutput("inat_bar")
             ),
-            # Table
-            card(
-                "placeholder"
-            )
+            nav_panel("Abundance", 
+                    dataTableOutput("inat_abd")
+            ),
+            nav_panel("All observations", dataTableOutput("inat_table")),
+            nav_panel("", tags$img(src='willem-dafoe-gq-style3.png', alt = "Willem Dafoe is delighted by his fancy coat", align = "center"))
+        ),
+        # Card for pbdb output
+        navset_card_underline(
+            title = "Snails that were near you",
+            nav_panel("Map", 
+                    plotlyOutput("pbdb_map"),
+                    plotlyOutput("pbdb_bar")
+            ),
+            nav_panel("Eras", 
+                    plotlyOutput("pbdb_eras")
+            ),
+            nav_panel("All observations", dataTableOutput("pbdb_table")),
+            nav_panel("", "placeholder")
         )
     )
 )
@@ -85,7 +86,16 @@ server <- function(input, output, session){
     })
 
     # Get paleobio db data
-    ##PLACEHOLDER##
+    pbdb_data <- eventReactive(input$enter,{
+        bounds <- bb()[c(2,1,4,3)]
+        pbdb_occurrences(
+            base_name = "Gastropoda",
+            show = c("coords", "classext"),
+            vocab = "pbdb",
+            limit = "all",
+            lngmax = bounds[4], lngmin = bounds[2], latmax = bounds[3], latmin = bounds[1]
+        )
+    })
 
     ###############
     # REACTIVE UI #
@@ -122,6 +132,7 @@ server <- function(input, output, session){
             xlim(bb()[c(1,3)])+
             ylim(bb()[c(2,4)]) +
             theme(legend.position = "none")
+        
     })
 
     # Make iNaturalist abundance bar graph
@@ -148,8 +159,11 @@ server <- function(input, output, session){
         inat_data() %>%
         # filter by year
         filter(year(observed_on) >= min(input$year), year(observed_on) <= max(input$year)) %>%
+        # add genus so they can sort the table with it
+        separate(scientific_name, into = c("genus","species"), sep = " ", remove = F) %>%
+        mutate(species = replace_na(species, "sp."))%>%
         add_count(scientific_name) %>%
-        distinct(scientific_name, common_name, n)
+        distinct(scientific_name, genus, species, common_name, n)
     })
 
     # Make iNaturalist observation data table
@@ -158,18 +172,67 @@ server <- function(input, output, session){
         # filter by year
         filter(year(observed_on) >= min(input$year), year(observed_on) <= max(input$year)) %>%
         # don't display columns that include iNaturalist username or redundant info
-        select(scientific_name, place_guess:longitude, common_name, observed_on)
+        select(scientific_name, place_guess:longitude, common_name, observed_on)%>%
+        # add genus so they can sort the table with it
+        separate(scientific_name, into = c("genus","species"), sep = " ", remove = F) %>%
+        mutate(
+            species = replace_na(species, "sp."),
+            # round coordinates for ease of display
+            latitude = round(latitude, 5),
+            longitude = round(longitude, 5)
+            )
     })
     
     ###############
     # PBDB OUTPUT #
     ###############
 
-    # Make paleobio db map/plots
-    ##PLACEHOLDER##
+    # Make paleobio db map
+    output$pbdb_map <- renderPlotly({
+        pbdb_data() %>%
+        # plot
+        ggplot()+
+        # geom_jitter instead of geom_point
+        # this is because if fossils are discovered together in the same rock formation they will all have the same coordinates
+            geom_jitter(
+                aes(x = lng, y = lat, color = genus),
+                show.legend = F
+            )+
+            geom_sf(data = map_feat()$osm_lines)+
+            xlim(bb()[c(1,3)])+
+            ylim(bb()[c(2,4)]) +
+            theme(legend.position = "none")
+    })
+
+    # Make pbdb abundance bar graph
+    output$pbdb_bar <- renderPlotly({
+        pbdb_data() %>%
+        add_count(genus) %>%
+        # Order genus by abundance
+        mutate(genus = fct_reorder(genus, -n)) %>%
+        # Plot
+        ggplot(aes(x = genus, fill = identified_name))+
+        geom_bar() +
+        theme(
+            legend.position = "none",
+            axis.text.x = element_text(angle = 60, hjust = 1)
+        )
+    })
+
+    # Make era-bars plot :)
+    output$pbdb_eras <- renderPlotly({
+        pbdb_data() %>%
+        ggplot()+
+        geom_linerange(aes(y = order, xmax = max_ma, xmin = min_ma, color = early_interval))+
+        xlim((c(max(pbdb_data()$min_ma), min(pbdb_data()$max_ma)))) +
+        xlab("Million years ago")+
+        ggtitle("Era Bars")
+    })
 
     # Make paleobio db table
-    ##PLACEHOLDER##
+    output$pbdb_table <- renderDataTable({
+        pbdb_data()
+    })
 }
 
-shinyApp(ui, server)
+shinyApp(ui, server) 
