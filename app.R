@@ -8,6 +8,29 @@ library(plotly)
 library(lubridate)
 library(DT)
 library(paleobioDB)
+library(httr)
+library(jsonlite)
+
+# Function to Fetch GBIF Image
+get_gbif_image <- function(taxon_name) {
+  search_url <- paste0("https://api.gbif.org/v1/species/match?name=", URLencode(taxon_name))
+  res <- GET(search_url)
+  if (status_code(res) != 200) return(NULL)
+  
+  taxon_data <- fromJSON(content(res, as = "text"))
+  if (!"usageKey" %in% names(taxon_data)) return(NULL)
+  
+  usage_key <- taxon_data$usageKey
+  occ_url <- paste0("https://api.gbif.org/v1/occurrence/search?taxonKey=", usage_key, "&mediaType=StillImage")
+  occ_res <- GET(occ_url)
+  if (status_code(occ_res) != 200) return(NULL)
+  
+  occ_data <- fromJSON(content(occ_res, as = "text"))
+  if (occ_data$count == 0 || length(occ_data$results) == 0) return(NULL)
+  
+  img_url <- occ_data$results[[1]]$media[[1]]$identifier
+  return(img_url)
+}
 
 # Define UI
 ui <- page_sidebar(
@@ -26,8 +49,31 @@ ui <- page_sidebar(
             "enter",
             label = "Find snails near me"
         ),
+        
+        #Putting in sliderInput so that users can adjust size of image that pops up
+        
+        sliderInput(
+          "image_size", 
+          label = "Adjust Image Size:", 
+          min = 100, max = 400, value = 200, step = 50
+        ),
+        
         # User can filter inaturalist observation dates
-        uiOutput("yearControl")
+        uiOutput("yearControl"),
+    
+    # Data Source Selector
+    selectInput(
+      "data_source", 
+      label = "Select Data Source:", 
+      choices = c("iNaturalist" = "inat", "PBDB" = "pbdb"),
+      selected = "inat"
+    ),
+    
+    # Column Selector (Populated Dynamically)
+    uiOutput("column_selector"),
+    
+    # Adding the download button inside the sidebar so that users can download csv of data
+    downloadButton("download_combined", "Download Data (CSV)")
     ),
     # Inaturalist and paleobio db output
     # Card for iNaturalist output
@@ -36,8 +82,7 @@ ui <- page_sidebar(
         nav_panel("Explore", 
         layout_columns(
                 plotlyOutput("inat_map"),
-                # JACK PUT IMAGE OUTPUT HERE
-                "placeholder for image",
+                uiOutput("clicked_image"),
                 plotlyOutput("inat_line")
         )
         ),
@@ -56,8 +101,7 @@ ui <- page_sidebar(
         nav_panel("Explore", 
         layout_columns(
                 plotlyOutput("pbdb_map"),
-                # JACK PUT IMAGE OUTPUT HERE
-                "placeholder for image",
+                uiOutput("clicked_pbdb_image"),
                 plotlyOutput("pbdb_eras")
         )
         ),
@@ -96,6 +140,25 @@ server <- function(input, output, session){
         bounds <- bb()[c(2,1,4,3)]
         get_inat_obs(taxon_name = "Gastropoda", bounds = bounds, quality = "research", maxresults = 1000)
     })
+    # Render the iNaturalist image with slider input
+    output$clicked_image <- renderUI({
+      point_data_inat <- event_data("plotly_click", source = "inat_map")
+      req(point_data_inat)
+      
+      point_id_inat <- point_data_inat$pointNumber + 1
+      img_url_inat <- inat_data()$image_url[point_id_inat]
+      img_size_inat <- paste0(input$image_size, "px")
+      
+      if (!is.null(img_url_inat) && nzchar(img_url_inat)) {
+        tags$img(
+          src = img_url_inat, 
+          alt = "Observation Image", 
+          style = paste("width:", img_size_inat, "; height:", img_size_inat, "; object-fit: contain; border: 1px solid black;")
+        )
+      } else {
+        tags$p("No image available for this observation.")
+      }
+    })
 
     # Get paleobio db data
     pbdb_data <- eventReactive(input$enter,{
@@ -108,6 +171,82 @@ server <- function(input, output, session){
             lngmax = bounds[4], lngmin = bounds[2], latmax = bounds[3], latmin = bounds[1]
         )
     })
+    # Handle PBDB Map Click and Display GBIF Image with Slider Input 
+    output$clicked_pbdb_image <- renderUI({
+      point_data_pbdb <- event_data("plotly_click", source = "pbdb_map")
+      req(point_data_pbdb)
+      
+      point_id_pbdb <- point_data_pbdb$pointNumber + 1
+      genus_name_pbdb <- pbdb_data()$genus[point_id_pbdb]
+      
+      img_url_pbdb <- get_gbif_image(genus_name_pbdb)
+      img_size_pbdb <- paste0(input$image_size, "px")
+      
+      if (!is.null(img_url_pbdb) && nzchar(img_url_pbdb)) {
+        tags$img(
+          src = img_url_pbdb, 
+          alt = paste("Fossil image of", genus_name_pbdb), 
+          style = paste("width:", img_size_pbdb, "; height:", img_size_pbdb, "; object-fit: contain; border: 1px solid black;")
+        )
+      } else {
+        tags$div(
+          style = "padding: 20px; border: 1px solid black; background-color: #f9f9f9;",
+          tags$p(
+            style = "font-size: 16px; font-weight: bold; color: #333;",
+            paste("No image available for genus:", genus_name_pbdb)
+          )
+        )
+      }
+    })
+    # Dynamically Populate Column Selector
+    output$column_selector <- renderUI({
+      req(input$data_source)
+      
+      # Get column names based on the selected data source
+      cols <- if (input$data_source == "inat") {
+        colnames(inat_data())
+      } else {
+        colnames(pbdb_data())
+      }
+      
+      # Create Checkboxes for Column Selection
+      checkboxGroupInput(
+        "selected_columns", 
+        label = "Select Columns to Download:", 
+        choices = cols, 
+        selected = cols
+      )
+    })
+    
+    output$download_combined <- downloadHandler(
+      filename = function() {
+        paste0(input$data_source, "_data_", Sys.Date(), ".csv")
+      },
+      
+      content = function(file) {
+        req(input$data_source, input$selected_columns)
+        
+        # Select the appropriate dataset
+        data_to_download <- if (input$data_source == "inat") {
+          inat_data()
+        } else {
+          pbdb_data()
+        }
+        
+        # Check if any columns are selected
+        if (length(input$selected_columns) == 0) {
+          showNotification("Please select at least one column to download.", type = "error")
+          return(NULL)
+        }
+        
+        # Export only selected columns
+        write.csv(
+          data_to_download[, input$selected_columns, drop = FALSE], 
+          file, 
+          row.names = FALSE
+        )
+      }
+    )
 
     ###############
     # REACTIVE UI #
@@ -137,22 +276,27 @@ server <- function(input, output, session){
 
     # Make iNaturalist map
     output$inat_map <- renderPlotly({
-        if (nrow(inat_data()) > 0){
-            inat_data() %>%
-            # filter by year
-            filter(year(observed_on) >= min(input$year), year(observed_on) <= max(input$year)) %>%
-            # plot
-            ggplot()+
-                geom_point(
-                    aes(x = longitude, y = latitude, color = scientific_name),
-                    show.legend = F
-                )+
-                geom_sf(data = map_feat()$osm_lines)+
-                xlim(bb()[c(1,3)])+
-                ylim(bb()[c(2,4)]) +
-                theme(legend.position = "none")
-        } else no_data_p
+      if (nrow(inat_data()) > 0){
+        # Create ggplot object
+        p <- inat_data() %>%
+          # Filter by year
+          filter(year(observed_on) >= min(input$year), year(observed_on) <= max(input$year)) %>%
+          # Plot
+          ggplot() +
+          geom_point(
+            aes(x = longitude, y = latitude, color = scientific_name),
+            show.legend = FALSE
+          ) +
+          geom_sf(data = map_feat()$osm_lines) +
+          xlim(bb()[c(1,3)]) +
+          ylim(bb()[c(2,4)]) +
+          theme(legend.position = "none")
         
+        # Convert ggplot to plotly with source defined
+        ggplotly(p, source = "inat_map")
+      } else {
+        no_data_p
+      }
     })
 
     # Make iNaturalist obervations over-time
@@ -226,23 +370,27 @@ server <- function(input, output, session){
 
     # Make paleobio db map
     output$pbdb_map <- renderPlotly({
-        if (nrow(pbdb_data()) > 0){
-            pbdb_data() %>%
-            # plot
-            ggplot()+
-            # geom_jitter instead of geom_point
-            # this is because if fossils are discovered together in the same rock formation they will all have the same coordinates
-                geom_jitter(
-                    aes(x = lng, y = lat, color = genus),
-                    show.legend = F
-                )+
-                geom_sf(data = map_feat()$osm_lines)+
-                xlim(bb()[c(1,3)])+
-                ylim(bb()[c(2,4)]) +
-                theme(legend.position = "none")
-        } else no_data_p
+      if (nrow(pbdb_data()) > 0){
+        # Create ggplot object
+        p <- pbdb_data() %>%
+          # Plot
+          ggplot() +
+          # Use geom_jitter to avoid overlapping points
+          geom_jitter(
+            aes(x = lng, y = lat, color = genus),
+            show.legend = FALSE
+          ) +
+          geom_sf(data = map_feat()$osm_lines) +
+          xlim(bb()[c(1,3)]) +
+          ylim(bb()[c(2,4)]) +
+          theme(legend.position = "none")
+        
+        # Convert ggplot to plotly with source defined
+        ggplotly(p, source = "pbdb_map")
+      } else {
+        no_data_p
+      }
     })
-
     # Make pbdb abundance bar graph
     output$pbdb_bar <- renderPlotly({
         if (nrow(pbdb_data()) > 0){
