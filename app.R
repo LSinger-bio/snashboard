@@ -38,7 +38,7 @@ ui <- page_sidebar(
                 plotlyOutput("inat_map"),
                 # JACK PUT IMAGE OUTPUT HERE
                 "placeholder for image",
-                "p"
+                plotlyOutput("inat_line")
         )
         ),
         nav_panel("Taxa", 
@@ -62,8 +62,10 @@ ui <- page_sidebar(
         )
         ),
         nav_panel("Taxa", 
+        layout_columns(
                 plotlyOutput("pbdb_bar"),
-                "placeholder for table"     
+                dataTableOutput("pbdb_abd")     
+        )
         ),
         nav_panel("All observations", dataTableOutput("pbdb_table")),
         nav_panel("", "")
@@ -151,6 +153,21 @@ server <- function(input, output, session){
                 theme(legend.position = "none")
         } else no_data_p
         
+    })
+
+    # Make iNaturalist obervations over-time
+    output$inat_line <- renderPlotly({
+        if (nrow(inat_data()) > 0){
+            inat_data() %>% 
+            # filter by year
+            filter(year(observed_on) >= min(input$year), year(observed_on) <= max(input$year)) %>% 
+            mutate(year = year(observed_on)) %>%
+            add_count(year, scientific_name) %>%
+            ggplot(aes(x = year, y = n, color = scientific_name))+
+            geom_line()+
+            geom_point()+
+            theme(legend.position = "none")
+        } else no_data_p
     })
 
     # Make iNaturalist abundance bar graph
@@ -253,6 +270,12 @@ server <- function(input, output, session){
             xlab("Million years ago")+
             ggtitle("Era Bars")
         } else no_data_p
+    })
+
+    # Make pbdb abundance data table
+    output$pbdb_abd <- renderDataTable({
+        pbdb_data() %>%
+        count(order, family, genus)
     })
 
     # Make paleobio db table
