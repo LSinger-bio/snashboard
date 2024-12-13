@@ -13,23 +13,17 @@ library(jsonlite)
 
 # Function to Fetch GBIF Image
 get_gbif_image <- function(taxon_name) {
-  search_url <- paste0("https://api.gbif.org/v1/species/match?name=", URLencode(taxon_name))
-  res <- GET(search_url)
-  if (status_code(res) != 200) return(NULL)
+  url <- paste0("https://api.gbif.org/v1/occurrence/search?mediaType=StillImage&scientificName=", URLencode(taxon_name))
+  res <- httr::GET(url)
   
-  taxon_data <- fromJSON(content(res, as = "text"))
-  if (!"usageKey" %in% names(taxon_data)) return(NULL)
-  
-  usage_key <- taxon_data$usageKey
-  occ_url <- paste0("https://api.gbif.org/v1/occurrence/search?taxonKey=", usage_key, "&mediaType=StillImage")
-  occ_res <- GET(occ_url)
-  if (status_code(occ_res) != 200) return(NULL)
-  
-  occ_data <- fromJSON(content(occ_res, as = "text"))
-  if (occ_data$count == 0 || length(occ_data$results) == 0) return(NULL)
-  
-  img_url <- occ_data$results[[1]]$media[[1]]$identifier
-  return(img_url)
+  if (res$status_code == 200) {
+    data <- jsonlite::fromJSON(content(res, "text"))
+    if (!is.null(data$results) && length(data$results) > 0 && !is.null(data$results$media[[1]])) {
+      img_url <- data$results$media[[1]]$identifier[1]
+      return(img_url)
+    }
+  }
+  return(NULL)
 }
 
 # Define UI
