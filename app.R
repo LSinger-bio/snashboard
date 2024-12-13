@@ -304,6 +304,8 @@ server <- function(input, output, session){
             ggplot(aes(x = year, y = n, color = scientific_name))+
             geom_line()+
             geom_point()+
+            ylab("Number of research grade observations")+
+            labs(title = "Number of observations per species over time", caption = "Data from iNaturalist.com")+
             theme(legend.position = "none")
         } else no_data_p
     })
@@ -346,8 +348,6 @@ server <- function(input, output, session){
         inat_data() %>%
         # filter by year
         filter(year(observed_on) >= min(input$year), year(observed_on) <= max(input$year)) %>%
-        # don't display columns that include iNaturalist username or redundant info
-        select(scientific_name, place_guess:longitude, common_name, observed_on)%>%
         # add genus so they can sort the table with it
         separate(scientific_name, into = c("genus","species"), sep = " ", remove = F) %>%
         mutate(
@@ -406,9 +406,11 @@ server <- function(input, output, session){
     output$pbdb_eras <- renderPlotly({
         if (nrow(pbdb_data()) > 0){
             pbdb_data() %>%
-            ggplot()+
-            geom_linerange(aes(y = order, xmax = max_ma, xmin = min_ma, color = early_interval))+
-            xlim((c(max(pbdb_data()$min_ma), min(pbdb_data()$max_ma)))) +
+            ggplot(aes(text =identified_name), size = 7)+
+            geom_linerange(aes(y = order, xmax = max_ma, xmin = min_ma, color = early_interval ), 
+                 alpha = .7, 
+                 position = position_dodge((width = .25)))+
+            xlim((c(max(snails$min_ma), min(snails$max_ma)))) +
             xlab("Million years ago")+
             ggtitle("Era Bars")
         } else no_data_p
