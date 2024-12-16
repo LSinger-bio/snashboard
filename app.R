@@ -410,7 +410,7 @@ server <- function(input, output, session){
             geom_linerange(aes(y = order, xmax = max_ma, xmin = min_ma, color = early_interval ), 
                  alpha = .7, 
                  position = position_dodge((width = .25)))+
-            xlim((c(max(snails$min_ma), min(snails$max_ma)))) +
+            xlim((c(max(pbdb_data()$min_ma), min(pbdb_data()$max_ma)))) +
             xlab("Million years ago")+
             ggtitle("Era Bars")
         } else no_data_p
