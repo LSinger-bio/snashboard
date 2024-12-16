@@ -14,16 +14,13 @@ jobs:
       ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
         
     steps:
-       - name: 🛎️ Checkout repository
-         uses: actions/checkout@v2
-         with:
-           fetch-depth: 0
-       - id: deploy
-         name: 💎 Deploy to shinyapps.io
-         uses: qwert666/shinyapps-actions@main
-         env:
-           SHINY_USERNAME: 'LSinger-bio' # put your own username here!
-           SHINY_TOKEN: ${{ secrets.SHINY_TOKEN }}
-           SHINY_SECRET: ${{ secrets.SHINY_SECRET }}
-           APP_NAME: 'snashboard' # this will show in the app's url
-           APP_DIR: ''
+      - uses: actions/checkout@v2
+      - uses: r-lib/actions/setup-r@master
+      - name: Install shiny
+        run: |
+          install.packages(c("shiny", "rsconnect"), type = "binary")
+        shell: Rscript {0}
+      - name: Push to shiny.io
+        run: |
+          Rscript -e "rsconnect::setAccountInfo(name='lsinger-bio', token=${{secrets.SHINY_TOKEN}}, secret=${{secrets.SHINY_SECRET}})"
+          Rscript -e "rsconnect::deployApp(appName = 'snashboard')" 
