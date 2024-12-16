@@ -13,7 +13,7 @@ jobs:
       - uses: r-lib/actions/setup-r@v2.11.1
       - name: Install shiny
         run: |
-          install.packages(c("shiny", "rsconnect", "DT","sf, "httr","lubridate","osmdata","paleobioDB","plotly","rinat","tidyverse"), type = "binary")
+          install.packages(c("shiny", "rsconnect", "DT","sf", "httr","lubridate","osmdata","paleobioDB","plotly","rinat","tidyverse"), type = "binary")
         shell: Rscript {0}
       - name: Push to shiny.io
         run: |
