@@ -281,7 +281,7 @@ server <- function(input, output, session){
             aes(x = longitude, y = latitude, color = scientific_name),
             show.legend = FALSE
           ) +
-          geom_sf(data = map_feat()$osm_lines) +
+          #geom_sf(data = map_feat()$osm_lines) +
           xlim(bb()[c(1,3)]) +
           ylim(bb()[c(2,4)]) +
           theme(legend.position = "none")
@@ -374,7 +374,7 @@ server <- function(input, output, session){
             aes(x = lng, y = lat, color = genus),
             show.legend = FALSE
           ) +
-          geom_sf(data = map_feat()$osm_lines) +
+          #geom_sf(data = map_feat()$osm_lines) +
           xlim(bb()[c(1,3)]) +
           ylim(bb()[c(2,4)]) +
           theme(legend.position = "none")
