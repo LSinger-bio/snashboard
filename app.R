@@ -10,7 +10,7 @@ library(DT)
 library(paleobioDB)
 library(httr)
 library(jsonlite)
-library(sf)
+#library(sf)
 
 # Function to Fetch GBIF Image
 get_gbif_image <- function(taxon_name) {
@@ -131,10 +131,10 @@ server <- function(input, output, session){
     #})
 
     # Get Natural Earth water features 
-    lakes <- read_sf("ne/ne_10m_lakes/ne_10m_lakes.shp")
-    rivers <- read_sf("ne/ne_10m_rivers_lake_centerlines/ne_10m_rivers_lake_centerlines.shp")
-    coast <- read_sf("ne/ne_10m_coastline/ne_10m_coastline.shp")
-    ocean <- read_sf("ne/ne_10m_ocean/ne_10m_ocean.shp")
+   # lakes <- read_sf("ne/ne_10m_lakes/ne_10m_lakes.shp")
+    #rivers <- read_sf("ne/ne_10m_rivers_lake_centerlines/ne_10m_rivers_lake_centerlines.shp")
+    #coast <- read_sf("ne/ne_10m_coastline/ne_10m_coastline.shp")
+    #ocean <- read_sf("ne/ne_10m_ocean/ne_10m_ocean.shp")
     
     # Get iNaturalist data
     inat_data <- eventReactive(input$enter,{
@@ -290,10 +290,10 @@ server <- function(input, output, session){
             show.legend = FALSE
           ) +
           #geom_sf(data = map_feat()$osm_lines) +
-          geom_sf(data = lakes, fill ="deepskyblue4")+  
-          geom_sf(data = ocean, fill ="deepskyblue4")+  
-          geom_sf(data = coast, color ="deepskyblue4")+  
-          geom_sf(data = rivers, color ="deepskyblue4")+
+          #geom_sf(data = lakes, fill ="deepskyblue4")+  
+          #geom_sf(data = ocean, fill ="deepskyblue4")+  
+          #geom_sf(data = coast, color ="deepskyblue4")+  
+          #geom_sf(data = rivers, color ="deepskyblue4")+
           xlim(bb()[c(1,3)]) +
           ylim(bb()[c(2,4)]) +
           theme(legend.position = "none")
@@ -387,10 +387,10 @@ server <- function(input, output, session){
             show.legend = FALSE
           ) +
           #geom_sf(data = map_feat()$osm_lines) +
-          geom_sf(data = lakes, fill ="deepskyblue4")+  
-          geom_sf(data = ocean, fill ="deepskyblue4")+  
-          geom_sf(data = coast, color ="deepskyblue4")+  
-          geom_sf(data = rivers, color ="deepskyblue4")+
+          #geom_sf(data = lakes, fill ="deepskyblue4")+  
+          #geom_sf(data = ocean, fill ="deepskyblue4")+  
+          #geom_sf(data = coast, color ="deepskyblue4")+  
+          #geom_sf(data = rivers, color ="deepskyblue4")+
           xlim(bb()[c(1,3)]) +
           ylim(bb()[c(2,4)]) +
           theme(legend.position = "none")
