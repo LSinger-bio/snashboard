@@ -10,6 +10,7 @@ library(DT)
 library(paleobioDB)
 library(httr)
 library(jsonlite)
+library(sf)
 
 # Function to Fetch GBIF Image
 get_gbif_image <- function(taxon_name) {
