@@ -283,12 +283,12 @@ server <- function(input, output, session){
         # Create ggplot object
         p <- inat_data() %>%
           # Filter by year
-          filter(year(observed_on) >= min(input$year), year(observed_on) <= max(input$year)) %>%
+          mutate(year = year(observed_on)) %>%
+          filter(year >= min(input$year), year <= max(input$year)) %>%
           # Plot
           ggplot() +
           geom_point(
-            aes(x = longitude, y = latitude, color = scientific_name),
-            show.legend = FALSE
+            aes(x = longitude, y = latitude, color = year, text = scientific_name)
           ) +
           #geom_sf(data = map_feat()$osm_lines) +
           #geom_sf(data = lakes, fill ="deepskyblue4")+  
@@ -297,7 +297,7 @@ server <- function(input, output, session){
           #geom_sf(data = rivers, color ="deepskyblue4")+
           xlim(bb()[c(1,3)]) +
           ylim(bb()[c(2,4)]) +
-          theme(legend.position = "none")
+          scale_color_viridis_c()
         
         # Convert ggplot to plotly with source defined
         ggplotly(p, source = "inat_map")
@@ -384,8 +384,7 @@ server <- function(input, output, session){
           ggplot() +
           # Use geom_jitter to avoid overlapping points
           geom_jitter(
-            aes(x = lng, y = lat, color = min_ma),
-            show.legend = FALSE
+            aes(x = lng, y = lat, color = min_ma, text = identified_name)
           ) +
           #geom_sf(data = map_feat()$osm_lines) +
           #geom_sf(data = lakes, fill ="deepskyblue4")+  
