@@ -128,12 +128,19 @@ server <- function(input, output, session){
             add_osm_feature(key = 'boundary', value = "administrative") %>% 
             osmdata_sf()
     })
+
+    # Get Natural Earth water features 
+    lakes <- read_sf("www/ne_10m_lakes/ne_10m_lakes.shp")
+    rivers <- read_sf("www/ne_10m_rivers_lake_centerlines/ne_10m_rivers_lake_centerlines.shp")
+    coast <- read_sf("www/ne_10m_coastline/ne_10m_coastline.shp")
+    ocean <- read_sf("www/ne_10m_ocean/ne_10m_ocean.shp")
     
     # Get iNaturalist data
     inat_data <- eventReactive(input$enter,{
         bounds <- bb()[c(2,1,4,3)]
         get_inat_obs(taxon_name = "Gastropoda", bounds = bounds, quality = "research", maxresults = 1000)
     })
+  
     # Render the iNaturalist image with slider input
     output$clicked_image <- renderUI({
       point_data_inat <- event_data("plotly_click", source = "inat_map")
@@ -282,6 +289,10 @@ server <- function(input, output, session){
             show.legend = FALSE
           ) +
           #geom_sf(data = map_feat()$osm_lines) +
+          geom_sf(data = lakes, fill ="deepskyblue4")+  
+          geom_sf(data = ocean, fill ="deepskyblue4")+  
+          geom_sf(data = coast, color ="deepskyblue4")+  
+          geom_sf(data = rivers, color ="deepskyblue4")+
           xlim(bb()[c(1,3)]) +
           ylim(bb()[c(2,4)]) +
           theme(legend.position = "none")
@@ -375,6 +386,10 @@ server <- function(input, output, session){
             show.legend = FALSE
           ) +
           #geom_sf(data = map_feat()$osm_lines) +
+          geom_sf(data = lakes, fill ="deepskyblue4")+  
+          geom_sf(data = ocean, fill ="deepskyblue4")+  
+          geom_sf(data = coast, color ="deepskyblue4")+  
+          geom_sf(data = rivers, color ="deepskyblue4")+
           xlim(bb()[c(1,3)]) +
           ylim(bb()[c(2,4)]) +
           theme(legend.position = "none")
