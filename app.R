@@ -10,6 +10,7 @@ library(DT)
 library(paleobioDB)
 library(httr)
 library(jsonlite)
+library(viridis)
 #library(sf)
 
 # Function to Fetch GBIF Image
@@ -383,7 +384,7 @@ server <- function(input, output, session){
           ggplot() +
           # Use geom_jitter to avoid overlapping points
           geom_jitter(
-            aes(x = lng, y = lat, color = genus),
+            aes(x = lng, y = lat, color = min_ma),
             show.legend = FALSE
           ) +
           #geom_sf(data = map_feat()$osm_lines) +
@@ -393,7 +394,7 @@ server <- function(input, output, session){
           #geom_sf(data = rivers, color ="deepskyblue4")+
           xlim(bb()[c(1,3)]) +
           ylim(bb()[c(2,4)]) +
-          theme(legend.position = "none")
+          scale_color_viridis_c()
         
         # Convert ggplot to plotly with source defined
         ggplotly(p, source = "pbdb_map")
