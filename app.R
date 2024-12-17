@@ -124,17 +124,17 @@ server <- function(input, output, session){
     })
 
     # Get map features (sf)
-    map_feat <- eventReactive(input$enter,{
-        opq(bbox = bb()) %>% 
-            add_osm_feature(key = 'boundary', value = "administrative") %>% 
-            osmdata_sf()
-    })
+    #map_feat <- eventReactive(input$enter,{
+      #  opq(bbox = bb()) %>% 
+       #     add_osm_feature(key = 'boundary', value = "administrative") %>% 
+        #    osmdata_sf()
+    #})
 
     # Get Natural Earth water features 
-    lakes <- read_sf("www/ne_10m_lakes/ne_10m_lakes.shp")
-    rivers <- read_sf("www/ne_10m_rivers_lake_centerlines/ne_10m_rivers_lake_centerlines.shp")
-    coast <- read_sf("www/ne_10m_coastline/ne_10m_coastline.shp")
-    ocean <- read_sf("www/ne_10m_ocean/ne_10m_ocean.shp")
+    lakes <- read_sf("ne/ne_10m_lakes/ne_10m_lakes.shp")
+    rivers <- read_sf("ne/ne_10m_rivers_lake_centerlines/ne_10m_rivers_lake_centerlines.shp")
+    coast <- read_sf("ne/ne_10m_coastline/ne_10m_coastline.shp")
+    ocean <- read_sf("ne/ne_10m_ocean/ne_10m_ocean.shp")
     
     # Get iNaturalist data
     inat_data <- eventReactive(input$enter,{
