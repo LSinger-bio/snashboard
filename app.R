@@ -140,7 +140,7 @@ server <- function(input, output, session){
     # Get iNaturalist data
     inat_data <- eventReactive(input$enter,{
         bounds <- bb()[c(2,1,4,3)]
-        get_inat_obs(taxon_name = "Gastropoda", bounds = bounds, quality = "research", maxresults = 1000)
+        get_inat_obs(taxon_name = "Gastropoda", bounds = bounds, quality = "research", maxresults = 10000)
     })
   
     # Render the iNaturalist image with slider input
