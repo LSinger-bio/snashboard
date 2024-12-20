@@ -1,9 +1,8 @@
 ---
 title: "Snashboard Final Report"
 author: "Lulu Singer, Jill Hakim, Jack Zhu"
-format: html
+format: pdf
 editor: visual
-output: html
 ---
 
 ## **SNASHBOARD: A Snail Dashboard Project**  
@@ -64,7 +63,7 @@ Tracking the geographic location of snails is important because snails are vital
 
 Some snails, such as the giant land snail are invasive species, vectors for infectious disease, and have become widespread due to the popularity of exotic pets (Gippet, Bates, Moulin, & Bertelsmeier, 2023). 
 
-In previous work, field samples have been collected to study the habitats and migrations of snails, and it would be helpful to have a static or dynamic data product to display where snail varieties are found. Individuals, such as Thomas Evereston on iNaturalist, created a search tool for freshwater and land snails where users can search for and identify snails and other gastropods of interest as well as note when they spot specific species. However, the search tools for freshwater and land snails are separate from each other (Everest, 2023), and do not feature fossil record data for snails once living in the area.  
+In previous work, field samples have been collected to study the habitats and migrations of snails, and it would be helpful to have a static or dynamic data product to display where snail varieties are found. Individuals, such as Thomas Evereston on iNaturalist, created a search tool for freshwater and land snails where users can search for and identify snails and other gastropods of interest as well as note when they spot specific species. However, the search tools for freshwater and land snails are separate from each other (Everest, 2023), and do not feature fossil record data for snails once living in the area. Current search tools for snails also do not allow for users to search for both present day snail observations and fossil records.
 
 ## Research Paradigms  
 
@@ -244,6 +243,8 @@ output$clicked_pbdb_image <- renderUI({
 ## **Dashboard Programming** 
 
 The **output\$inat_map** outputs an interactive map with the **plotly** and **ggplot2** packages. The interactive map shows snail observations from the iNaturalist database within the administrative bounds of the location the user enters in the dashboard. The records observed are filtered by user-defined years indicated by the slider input.  
+
+The
 
 We also included a download button in the user interface: 
 
